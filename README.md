@@ -114,3 +114,15 @@ The below steps will take a Linux VM that you want to use as a secure devcontain
 - [devcontainer.json reference](https://code.visualstudio.com/docs/remote/devcontainerjson-reference)
 - [Connect to remote Docker over SSH](https://code.visualstudio.com/docs/containers/ssh)
 - [Generate a new SSH Key and adding it to the ssh-agent](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent)
+
+# Troubleshooting
+- When logging in to Azure via cli (az login) you might get an error with a redirect. Look at the page and add the port highlighted to PORT forwarding. (e.g. Port 44563 -> localhost:44563)
+  - Login with ```az login```:
+    - ![az login](images/loginerror1.png)
+  - Login with your azure account when prompted.
+  - Page can't be reached error could to shown:
+    - ![Login Page Not Found](images/loginerror2.png)
+  - Need to add port forwarding for the port highlighted above:
+    - ![Port Forwarding](images/loginerror3.png) 
+  - The page can't be reached with refresh automatically and log in once the port has been forwarded.
+  - **Note:** The port will change evertime you login.

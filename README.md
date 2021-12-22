@@ -89,4 +89,4 @@ Extras to show how DevContainers and Codespaces can be used for remote developme
 - [Create a developement container](https://code.visualstudio.com/docs/remote/create-dev-container)
 - [devcontainer.json reference](https://code.visualstudio.com/docs/remote/devcontainerjson-reference)
 - [Connect to remote Docker over SSH](https://code.visualstudio.com/docs/containers/ssh)
-- [Generate a new SSH Key and adding it to the ssh-agent](https://code.visualstudio.com/docs/containers/ssh)
+- [Generate a new SSH Key and adding it to the ssh-agent](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent)

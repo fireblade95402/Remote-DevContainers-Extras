@@ -84,10 +84,11 @@ The below steps will take a Linux VM that you want to use as a secure devcontain
     ![Docker Externsion](images/docker%20extension.png)
   
 ## Process to connect to DevContainer
-- Connect to the remote host using ssh (e.g. azureuser@1.2.45.6)  
+- Connect to the remote host using ssh (e.g. azureuser@1.2.45.6) by running command:
+  ``` Remote-SSH: Connect to Host  ```
   ![SSH to Remote Host](images/ssh%20to%20host.png)
 - On the remote VM clone a repo (e.g. git clone ……)
-- Run command : Remote-Containers: Open Folder in container
+- Run command : ``` Remote-Containers: Open Folder in container ```
 - Select the folder you want and VS Code will create/open the devcontainer on the remote VM.  
   ![DevContainer](images/devcontainer.png)
 
@@ -95,7 +96,7 @@ The below steps will take a Linux VM that you want to use as a secure devcontain
 - To edit / Open SSH configuration file:  
   - ```Remote-SSH: Open SSH Confiuratio File```
 - To connect to remote host:  
-  - ```Remote-SSH: Connnect to Host``` 
+  - ```Remote-SSH: Connect to Host``` 
   - ```Remote-SSH: Connect Current Windows to Host```
 - Reload VS Code Window if any config changes have been made (e.g. added new SSH Host in config file):  
   - ```Developer: Reload Window```

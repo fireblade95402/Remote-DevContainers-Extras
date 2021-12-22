@@ -1,0 +1,45 @@
+#!/bin/bash
+
+resourceGroup=Temp
+vmName=democodeinitvm
+location=uksouth
+adminUsername=azureuser
+SSHKeyFile=<Public Key>.pub
+vnet=Development-vnet
+subnet=default
+customScriptFile=docker-cloud-init.txt
+
+echo Create DevContainer Host VM in azureuser
+echo ==========================================
+echo Parameters
+echo ------------------------------------------
+echo Resource Group: $resourceGroup
+echo VM Name: $vmName
+echo Location: $location
+echo Admin Username: $adminUsername
+echo SSH Key File: $SSHKeyFile
+echo Virtual Network: $vnet
+echo Subnet: $subnet
+echo Customer Script: $customScriptFile
+echo ------------------------------------------
+
+echo Create Resource Group
+echo ------------------------------------------
+az group create --name $resourceGroup --location $location
+echo ------------------------------------------
+echo Create VM
+echo ------------------------------------------
+az vm create \
+--resource-group $resourceGroup \
+--name $vmName \
+--location $location \
+--admin-username $adminUsername \
+--ssh-key-value $SSHKeyFile \
+--vnet-name $vnet \
+--subnet $subnet \
+--public-ip-address "" \
+--image UbuntuLTS \
+--custom-data docker-cloud-init.txt
+echo ------------------------------------------
+echo FINISHED
+echo ==========================================

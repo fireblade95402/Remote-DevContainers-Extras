@@ -76,7 +76,7 @@ Extras to show how DevContainers and Codespaces can be used for remote developme
   - ```Remote-SSH: Connect Current Windows to Host```
 - Reload VS Code Window if any config changes have been made (e.g. added new SSH Host in config file):  
   - ```Developer: Reload Window```
-- Create new/replace devcontainer in a repo. :  
+- Create new/replace devcontainer configuration files in a repo. :  
   - ```Remote-Containers: Add Developement Container Configuration Files...```
 - To configure the remote container:  
   - ```Remote-Containers: Configure Container Features```

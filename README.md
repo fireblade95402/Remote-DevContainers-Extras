@@ -9,7 +9,22 @@ Extras to show how DevContainers and Codespaces can be used for remote developme
 
 
 # Setup Walkthrough
-## Host / Remote VM
+
+The below steps will take a Linux VM that you want to use as a secure devcontainer host. It will setup docker on the host and then setup your developer desktop to connect to it for running devcontainers for development.
+
+**Please note:** this doesn't cover the networking elements for connection between the developer desktop and devcontainer host. Key to note that the connection will require **SSH** connectivity.
+
+## Prerequisite 
+
+- Azure Subscription for hosting the devcontainer hosts.
+  - Examples of hosts are Linux VM's or Dev/Test Labs for hosting Linux VM's...
+- Internet access to download and install VS Code
+- Remote hosts able to install docker
+- VS Code Extensions able to be installed on the developer desktop and devcontainer host.
+- Able to generate ssh keys 
+- Access to setup ssh-agent on developer desktop
+
+## devcontainer Host / Remote VM
 - Creates a ssh key pair for connecting to the VM via VS Code.
 - Create a linux VM with docker installed (link: https://docs.docker.com/engine/install/ubuntu/)  
   ```bash
@@ -37,7 +52,7 @@ Extras to show how DevContainers and Codespaces can be used for remote developme
   ```
 
 ## Client
-- Install VS Code
+- Install VS Code (https://code.visualstudio.com/)
 - Install the **Remote Development** extension:  
 ![Remote Development Extension](images/Remote-Development%20Extension.png)    
 - Copy the private key into **.ssh** folder

@@ -69,12 +69,19 @@ Extras to show how DevContainers and Codespaces can be used for remote developme
   ![DevContainer](images/devcontainer.png)
 
 # Example VS Code Commands
-- To edit / Open SSH configuration file: ```Remote-SSH: Open SSH Confiuratio File```
-- To connect to remote host: *Remote-SSH: Connnect to Host* or ```Remote-SSH: Connect Current Windows to Host```
-- Reload VS Code Window if any config changes have been made (e.g. added new SSH Host in config file): ```Developer: Reload Window```
-- Create new/replace devcontainer in a repo. : ```Remote-Containers: Add Developement Container Configuration Files...```
-- To configure the remote container: ```Remote-Containers: Configure Container Features```
-- Once on remote VM to open a devcontainer to can either run: ```Remote-Containers: Open Folder in Container```
+- To edit / Open SSH configuration file:  
+  - ```Remote-SSH: Open SSH Confiuratio File```
+- To connect to remote host:  
+  - ```Remote-SSH: Connnect to Host``` 
+  - ```Remote-SSH: Connect Current Windows to Host```
+- Reload VS Code Window if any config changes have been made (e.g. added new SSH Host in config file):  
+  - ```Developer: Reload Window```
+- Create new/replace devcontainer in a repo. :  
+  - ```Remote-Containers: Add Developement Container Configuration Files...```
+- To configure the remote container:  
+  - ```Remote-Containers: Configure Container Features```
+- Once on remote VM to open a devcontainer to can either run:  
+  - ```Remote-Containers: Open Folder in Container```
 
 
 # Links

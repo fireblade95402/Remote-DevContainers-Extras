@@ -1,9 +1,9 @@
 # Remote-DevContainers-Extras
-Extras to show how DevContainers and Codespaces can be used for remote development with resources behind the firewall
+Extras to show how DevContainers and CodeSpaces can be used for remote development with resources behind the firewall
 
 # Options
 1) Plain and simple use the SSH remote extension in VS Code. No code to show in here but worth highlighting as an option.
-2) Codespace with a VPN into the network :smile:
+2) CodeSpace with a VPN into the network :smile:
 3) SSH extension for VS code with a twist. Remote host is Linux with Docker installed. Run DevContainer on remote host. 
 
 
@@ -84,7 +84,7 @@ The below steps will take a Linux VM that you want to use as a secure devcontain
     $([String]$response.GetResponseHeader("Location")).Replace('tag','download') + '/OpenSSH-Win32.zip'
   ```
 - Optional: Install Docker Extension for visibility of the containers and images created  
-    ![Docker Externsion](images/docker%20extension.png)
+    ![Docker Extension](images/docker%20extension.png)
   
 ## Process to connect to DevContainer
 - Connect to the remote host using ssh (e.g. azureuser@1.2.45.6) by running command:
@@ -97,14 +97,14 @@ The below steps will take a Linux VM that you want to use as a secure devcontain
 
 # Example VS Code Commands
 - To edit / Open SSH configuration file:  
-  - ```Remote-SSH: Open SSH Confiuratio File```
+  - ```Remote-SSH: Open SSH Configuration File```
 - To connect to remote host:  
   - ```Remote-SSH: Connect to Host``` 
   - ```Remote-SSH: Connect Current Windows to Host```
 - Reload VS Code Window if any config changes have been made (e.g. added new SSH Host in config file):  
   - ```Developer: Reload Window```
 - Create new/replace devcontainer configuration files in a repo. :  
-  - ```Remote-Containers: Add Developement Container Configuration Files...```
+  - ```Remote-Containers: Add Development Container Configuration Files...```
 - To configure the remote container:  
   - ```Remote-Containers: Configure Container Features```
 - Once on remote VM to open a devcontainer to can either run:  
@@ -113,7 +113,7 @@ The below steps will take a Linux VM that you want to use as a secure devcontain
 
 # Links
 - [Developing inside a Container](https://code.visualstudio.com/docs/remote/containers)
-- [Create a developement container](https://code.visualstudio.com/docs/remote/create-dev-container)
+- [Create a development container](https://code.visualstudio.com/docs/remote/create-dev-container)
 - [devcontainer.json reference](https://code.visualstudio.com/docs/remote/devcontainerjson-reference)
 - [Connect to remote Docker over SSH](https://code.visualstudio.com/docs/containers/ssh)
 - [Generate a new SSH Key and adding it to the ssh-agent](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent)
@@ -128,4 +128,4 @@ The below steps will take a Linux VM that you want to use as a secure devcontain
   - Need to add port forwarding for the port highlighted above:
     - ![Port Forwarding](images/loginerror3.png) 
   - The page can't be reached with refresh automatically and log in once the port has been forwarded.
-  - **Note:** The port will change everytime you login.
+  - **Note:** The port will change every time you login.

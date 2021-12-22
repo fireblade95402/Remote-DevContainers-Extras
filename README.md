@@ -14,7 +14,7 @@ The below steps will take a Linux VM that you want to use as a secure devcontain
 
 **Please note:** this doesn't cover the networking elements for connection between the developer desktop and devcontainer host. Key to note that the connection will require **SSH** connectivity.
 
-## Prerequisite 
+## Prerequisites 
 
 - Azure Subscription for hosting the devcontainer hosts.
   - Examples of hosts are Linux VM's or Dev/Test Labs for hosting Linux VM's...

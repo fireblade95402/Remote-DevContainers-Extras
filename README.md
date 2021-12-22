@@ -58,6 +58,9 @@ The below steps will take a Linux VM that you want to use as a secure devcontain
   ```bash
     sudo usermod -aG docker $USER
   ```
+- Example 
+  - [Cloud-Init Script](host/docker-cloud-init.txt) to install docker:
+  - [Azure cli Script](host/deploy-vm.azcli) to create VM using the cloud-init script above.
 
 ## Client
 - Install VS Code (https://code.visualstudio.com/)

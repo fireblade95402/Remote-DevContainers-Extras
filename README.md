@@ -25,8 +25,16 @@ The below steps will take a Linux VM that you want to use as a secure devcontain
 - Access to setup ssh-agent on developer desktop
 
 ## devcontainer Host / Remote VM
-- Creates a ssh key pair for connecting to the VM via VS Code.
-- Create a linux VM with docker installed (link: https://docs.docker.com/engine/install/ubuntu/)  
+- Creates a ssh key pair for connecting to the VM via VS Code 
+  - From Windows: https://docs.microsoft.com/en-us/azure/virtual-machines/linux/ssh-from-windows 
+  - From Linux/Mac: https://docs.microsoft.com/en-us/azure/virtual-machines/linux/mac-create-ssh-keys
+  - Example:
+    ```powershell
+      ssh-keygen -m PEM -t rsa -b 4096
+    ```
+  
+- Create a linux VM using the ssh key generated above.
+- Install docker on the VM (https://docs.docker.com/engine/install/ubuntu/):  
   ```bash
     sudo apt-get update
 

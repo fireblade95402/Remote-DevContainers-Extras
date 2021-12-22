@@ -128,4 +128,4 @@ The below steps will take a Linux VM that you want to use as a secure devcontain
   - Need to add port forwarding for the port highlighted above:
     - ![Port Forwarding](images/loginerror3.png) 
   - The page can't be reached with refresh automatically and log in once the port has been forwarded.
-  - **Note:** The port will change evertime you login.
+  - **Note:** The port will change everytime you login.

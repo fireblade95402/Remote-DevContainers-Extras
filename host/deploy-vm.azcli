@@ -8,7 +8,7 @@ resourceGroup=Development
 defaultPrefix=codespace
 location=uksouth
 adminUsername=azureuser
-SSHKeyFile=codespace-<public Key>.pub
+SSHKeyFile=<public Key>.pub
 subnet=backend
 customScriptFile=docker-cloud-init.txt
 

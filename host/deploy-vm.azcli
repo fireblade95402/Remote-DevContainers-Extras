@@ -1,45 +1,132 @@
 #!/bin/bash
 
-resourceGroup=Temp
-vmName=democodeinitvm
+# Notes
+# To create self-signed root and client certificates for a P2S VPN heres a link: https://www.getanadmin.com/azure/azure-point-to-site-vpn-setup-step-by-step/
+
+# Parameters
+resourceGroup=Development
+defaultPrefix=codespace
 location=uksouth
 adminUsername=azureuser
-SSHKeyFile=<Public Key>.pub
-vnet=Development-vnet
-subnet=default
+SSHKeyFile=codespace-<public Key>.pub
+subnet=backend
 customScriptFile=docker-cloud-init.txt
 
-echo Create DevContainer Host VM in azureuser
+# Variables
+vmName="$defaultPrefix-vm"
+vmNicName="$defaultPrefix-nic"
+vnet="$defaultPrefix-vnet"
+vpnGateway="$defaultPrefix-gw"
+vpnGatewayPIP="$defaultPrefix-gw-pip"
+
+
+# Show all variables used
 echo ==========================================
-echo Parameters
-echo ------------------------------------------
+echo Parameters / Variables
+echo ==========================================
 echo Resource Group: $resourceGroup
+echo Default Prefic: $defaultPrefix
 echo VM Name: $vmName
+echo VM Nic Name: $vmNicName
 echo Location: $location
 echo Admin Username: $adminUsername
 echo SSH Key File: $SSHKeyFile
 echo Virtual Network: $vnet
 echo Subnet: $subnet
 echo Customer Script: $customScriptFile
-echo ------------------------------------------
+echo VPN Gateway: $vpnGateway
+echo VPN Gateway Public IP: $vpnGatewayPIP
+echo ==========================================
 
-echo Create Resource Group
-echo ------------------------------------------
+# Create Resource Group 
 az group create --name $resourceGroup --location $location
-echo ------------------------------------------
-echo Create VM
-echo ------------------------------------------
+
+# ---------------------------------------------------------
+# Networking
+# ---------------------------------------------------------
+
+# Create VNET with backend subnet for the host VM's
+az network vnet create \
+  -n $vnet \
+  -g $resourceGroup \
+  -l $location \
+  --address-prefix 10.1.0.0/16 \
+  --subnet-name $subnet \
+  --subnet-prefix 10.1.0.0/24
+
+# Create the subnet for the VPN Gateway 
+az network vnet subnet create \
+--vnet-name $vnet \
+-n GatewaySubnet \
+-g $resourceGroup \
+--address-prefix 10.1.255.0/27
+# ---------------------------------------------------------
+
+# ---------------------------------------------------------
+# VPN Gateway creation
+# ---------------------------------------------------------
+
+#Create public IP address for the VPN Gateway
+az network public-ip create \
+  -n $vpnGatewayPIP \
+  -g $resourceGroup \
+  --allocation-method Dynamic 
+
+#Create hte VPN Gateway with P2S enabled
+az network vnet-gateway create \
+-g $resourceGroup \
+-n $vpnGateway \
+-l $location \
+--public-ip-address $vpnGatewayPIP \
+--sku Basic \
+--gateway-type Vpn \
+--vpn-type RouteBased \
+--address-prefixes 172.16.24.0/24 \
+--vpn-gateway-generation Generation1 \
+--vnet $vnet 
+-no-wait
+
+# Install the certificate for the VPN Gateway
+az network vnet-gateway root-cert create \
+-g $resourceGroup \
+-n p2sroot \
+--gateway-name $vpnGateway \
+--public-cert-data vpngatecert.txt
+
+# Generate the client install package for the VPN Gateway
+az network vnet-gateway vpn-client generate \
+-g $resourceGroup \
+-n $vpnGateway \
+--processor-architecture Amd64
+
+#####$subnetId=$(az network vnet subnet list --resource-group $resourceGroup --vnet-name $vnet --query "[?name=='$subnet'].id" -o tsv)
+# ---------------------------------------------------------
+
+# ---------------------------------------------------------
+# DevContainer / Host VM Creation
+# ---------------------------------------------------------
+
+# Create static Private IP address for the VM
+az network nic create \
+--name $vmNicName \
+--resource-group $resourceGroup \
+--location $location \
+--subnet $subnet \
+--private-ip-address 10.1.0.4 \
+--vnet-name $vnet \
+--public-ip-address ""
+
+#Create the VM
 az vm create \
 --resource-group $resourceGroup \
 --name $vmName \
 --location $location \
 --admin-username $adminUsername \
 --ssh-key-value $SSHKeyFile \
---vnet-name $vnet \
---subnet $subnet \
---public-ip-address "" \
+--nics $vmNicName \
 --image UbuntuLTS \
 --custom-data docker-cloud-init.txt
-echo ------------------------------------------
-echo FINISHED
-echo ==========================================
+
+# Enable auto shutdown
+az vm auto-shutdown --resource-group $resourceGroup --name $vmName --time 19:00 
+# ---------------------------------------------------------

@@ -9,7 +9,9 @@
 	
 	// Add the IDs of extensions you want installed when the container is created.
 	"extensions": [
-		"ms-vscode.azurecli"
+		"ms-vscode.azurecli",
+		"yzhang.markdown-all-in-one",
+		"ban.spellright"
 	],
 	
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.

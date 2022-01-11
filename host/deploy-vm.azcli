@@ -4,18 +4,22 @@
 # To create self-signed root and client certificates for a P2S VPN heres a link: https://www.getanadmin.com/azure/azure-point-to-site-vpn-setup-step-by-step/
 
 # Parameters
-resourceGroup=Development
-defaultPrefix=codespace
+resourceGroup=development
+defaultPrefix=dev
 location=uksouth
 adminUsername=azureuser
-SSHKeyFile=<public Key>.pub
-subnet=backend
+SSHKeyFile=codespace.pub
+vpngatewaycert=vpngatecert.txt
+sharedSubnet=shared
+backendSubnet=backend
+frontendSubnet=frontend
 customScriptFile=docker-cloud-init.txt
 
 # Variables
 vmName="$defaultPrefix-vm"
 vmNicName="$defaultPrefix-nic"
 vnet="$defaultPrefix-vnet"
+aci="$defaultPrefix-dns-forwarder-aci"
 vpnGateway="$defaultPrefix-gw"
 vpnGatewayPIP="$defaultPrefix-gw-pip"
 
@@ -32,7 +36,9 @@ echo Location: $location
 echo Admin Username: $adminUsername
 echo SSH Key File: $SSHKeyFile
 echo Virtual Network: $vnet
-echo Subnet: $subnet
+echo sharedSubnet: $sharedSubnet
+echo frontendSubnet: $frontendSubnet
+echo backendSubnet: $backendSubnet
 echo Customer Script: $customScriptFile
 echo VPN Gateway: $vpnGateway
 echo VPN Gateway Public IP: $vpnGatewayPIP
@@ -45,13 +51,13 @@ az group create --name $resourceGroup --location $location
 # Networking
 # ---------------------------------------------------------
 
-# Create VNET with backend subnet for the host VM's
+# Create VNET with shared subnet for the host VM's
 az network vnet create \
   -n $vnet \
   -g $resourceGroup \
   -l $location \
   --address-prefix 10.1.0.0/16 \
-  --subnet-name $subnet \
+  --subnet-name $sharedSubnet \
   --subnet-prefix 10.1.0.0/24
 
 # Create the subnet for the VPN Gateway 
@@ -60,6 +66,45 @@ az network vnet subnet create \
 -n GatewaySubnet \
 -g $resourceGroup \
 --address-prefix 10.1.255.0/27
+
+# Create the subney for frontend services 
+az network vnet subnet create \
+--vnet-name $vnet \
+-n $frontendSubnet \
+-g $resourceGroup \
+--address-prefix 10.1.1.0/24
+
+# Create the subney for backend services
+az network vnet subnet create \
+--vnet-name $vnet \
+-n $backendSubnet \
+-g $resourceGroup \
+--address-prefix 10.1.2.0/24
+
+#Get shared Subnet ID for ACI 
+sharedSubnetId=$(az network vnet subnet list --resource-group $resourceGroup --vnet-name $vnet --query "[?name=='$sharedSubnet'].id" -o tsv)
+
+#DNS Forwarder (ACI)
+az container create \
+  --resource-group $resourceGroup \
+  --location $location \
+  --memory 0.5 \
+  --name $aci \
+  --image coredns/coredns:latest \
+  --ports 53 \
+  --protocol UDP \
+  --ip-address Private \
+  --subnet $sharedSubnetId
+  --gitrepo-url https://github.com/Sam-Rowe/Remote-DevContainers-Extras/tree/main/host \
+  --gitrepo-mount-path /config \
+  --command-line "/coredns -conf /config/Corefile"
+
+# Get private IP of Container Instance
+dnsip=$(az container show --name $aci --resource-group $resourceGroup --query ipAddress.ip --output tsv)
+
+# Update Custom DNS in VNET
+az network vnet update --name $vnet --resource-group $resourceGroup --dns-servers $dnsip
+
 # ---------------------------------------------------------
 
 # ---------------------------------------------------------
@@ -84,14 +129,14 @@ az network vnet-gateway create \
 --address-prefixes 172.16.24.0/24 \
 --vpn-gateway-generation Generation1 \
 --vnet $vnet 
--no-wait
+--no-wait
 
 # Install the certificate for the VPN Gateway
 az network vnet-gateway root-cert create \
 -g $resourceGroup \
 -n p2sroot \
 --gateway-name $vpnGateway \
---public-cert-data vpngatecert.txt
+--public-cert-data $vpngatewaycert
 
 # Generate the client install package for the VPN Gateway
 az network vnet-gateway vpn-client generate \
@@ -99,7 +144,6 @@ az network vnet-gateway vpn-client generate \
 -n $vpnGateway \
 --processor-architecture Amd64
 
-#####$subnetId=$(az network vnet subnet list --resource-group $resourceGroup --vnet-name $vnet --query "[?name=='$subnet'].id" -o tsv)
 # ---------------------------------------------------------
 
 # ---------------------------------------------------------
@@ -111,8 +155,8 @@ az network nic create \
 --name $vmNicName \
 --resource-group $resourceGroup \
 --location $location \
---subnet $subnet \
---private-ip-address 10.1.0.4 \
+--subnet $backendSubnet \
+--private-ip-address 10.1.2.4 \
 --vnet-name $vnet \
 --public-ip-address ""
 

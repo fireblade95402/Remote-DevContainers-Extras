@@ -4,7 +4,7 @@
 # To create self-signed root and client certificates for a P2S VPN heres a link: https://www.getanadmin.com/azure/azure-point-to-site-vpn-setup-step-by-step/
 
 # Parameters
-resourceGroup=development
+resourceGroup=dev-container-test
 defaultPrefix=dev
 location=uksouth
 adminUsername=azureuser
@@ -84,6 +84,9 @@ az network vnet subnet create \
 #Get shared Subnet ID for ACI 
 sharedSubnetId=$(az network vnet subnet list --resource-group $resourceGroup --vnet-name $vnet --query "[?name=='$sharedSubnet'].id" -o tsv)
 
+#Set DNS to Default for ACI deployment
+# az network vnet update --name $vnet --resource-group $resourceGroup --dns-servers ''
+
 #DNS Forwarder (ACI)
 az container create \
   --resource-group $resourceGroup \
@@ -95,10 +98,12 @@ az container create \
   --protocol UDP \
   --ip-address Private \
   --subnet $sharedSubnetId \
-  --gitrepo-url https://github.com/Sam-Rowe/Remote-DevContainers-Extras/tree/main/host \
+  --gitrepo-url https://github.com/Sam-Rowe/Remote-DevContainers-Extras \
   --gitrepo-mount-path /config \
-  --command-line "/coredns -conf /config/Corefile"
+  --command-line "/coredns -conf /config/host/Corefile"
 
+# https://github.com/redocksoft/coredns-config-azure-forwarder
+# https://github.com/Sam-Rowe/Remote-DevContainers-Extras
 # Get private IP of Container Instance
 dnsip=$(az container show --name $aci --resource-group $resourceGroup --query ipAddress.ip --output tsv)
 
@@ -173,4 +178,7 @@ az vm create \
 
 # Enable auto shutdown
 az vm auto-shutdown --resource-group $resourceGroup --name $vmName --time 19:00 
+
+#restart VM (pickup new dns)
+# az vm restart --resource-group $resourceGroup --name $vmName
 # ---------------------------------------------------------

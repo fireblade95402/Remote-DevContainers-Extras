@@ -94,7 +94,7 @@ az container create \
   --ports 53 \
   --protocol UDP \
   --ip-address Private \
-  --subnet $sharedSubnetId
+  --subnet $sharedSubnetId \
   --gitrepo-url https://github.com/Sam-Rowe/Remote-DevContainers-Extras/tree/main/host \
   --gitrepo-mount-path /config \
   --command-line "/coredns -conf /config/Corefile"

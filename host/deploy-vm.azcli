@@ -4,7 +4,7 @@
 # To create self-signed root and client certificates for a P2S VPN heres a link: https://www.getanadmin.com/azure/azure-point-to-site-vpn-setup-step-by-step/
 
 # Parameters
-resourceGroup=dev-container-test
+resourceGroup=development
 defaultPrefix=dev
 location=uksouth
 adminUsername=azureuser
@@ -14,6 +14,7 @@ sharedSubnet=shared
 backendSubnet=backend
 frontendSubnet=frontend
 customScriptFile=docker-cloud-init.txt
+corednsFile=Corefile
 
 # Variables
 vmName="$defaultPrefix-vm"
@@ -26,7 +27,7 @@ vpnGatewayPIP="$defaultPrefix-gw-pip"
 
 # Show all variables used
 echo ==========================================
-echo Parameters / Variables
+echo "Parameters / Variables"
 echo ==========================================
 echo Resource Group: $resourceGroup
 echo Default Prefic: $defaultPrefix
@@ -42,16 +43,88 @@ echo backendSubnet: $backendSubnet
 echo Customer Script: $customScriptFile
 echo VPN Gateway: $vpnGateway
 echo VPN Gateway Public IP: $vpnGatewayPIP
+echo VPN Cert File: $vpngatewaycert
 echo ==========================================
 
-# Create Resource Group 
+echo ==========================================
+echo "Checking for required Files"
+echo ==========================================
+
+fileMissing=false
+
+if [ -f "$SSHKeyFile" ]; 
+then
+  echo "SSH File: $SSHKeyFile exists."
+else
+  echo "SSH File: $SSHKeyFile MISSING."
+  fileMissing=true
+fi
+
+if [ -f "$vpngatewaycert" ]; 
+then
+  echo "VPN Cert File: $vpngatewaycert exists."
+else
+ echo "VPN Cert File: $vpngatewaycert MISSING."
+ fileMissing=true
+fi
+
+if [ -f "$customScriptFile" ]; 
+then
+  echo "Docker Custom Script File: $customScriptFile exists."
+else
+ echo "Docker Custom Script File: $customScriptFile MISSING."
+ fileMissing=true
+fi
+
+if [ -f "./Corefile" ]; 
+then
+  echo "CoreDNS File: $corednsFile exists."
+else
+ echo "CoreDNS File: $corednsFile MISSING."
+ fileMissing=true
+fi
+
+if [ $fileMissing == true ]; 
+then
+  echo ==========================================
+  echo "Exiting due to missing files."
+  echo ==========================================
+  exit 1
+fi
+echo ==========================================
+
+while true; do
+    read -p "Do you wish to continue with creation of environment (y/n)?" yn
+    case $yn in
+        [Yy]* ) break;;
+        [Nn]* ) exit;;
+        * ) echo "Please answer yes or no.";;
+    esac
+done
+
+vpnwait=false
+while true; do
+    read -p "VPN Gateway takes time to complete. Waiting before next tasks execute will generate the client URL at the end. No waiting will require checking the status and generating the client in the portal later. Do you want to wait or not (y/n)?" yn
+    case $yn in
+        [Yy]* ) echo "going to wait for VPN Gateway to complete before moving on to next tasks" ; vpnwait=true ; break;;
+        [Nn]* ) echo "not waiting for vpn gateway to complete. Will not run the genration of the client url" ; break;;
+        * ) echo "Please answer yes or no.";;
+    esac
+done
+
+echo =================================================
+echo "Creating Resource Group"
+echo =================================================
 az group create --name $resourceGroup --location $location
 
 # ---------------------------------------------------------
 # Networking
 # ---------------------------------------------------------
 
-# Create VNET with shared subnet for the host VM's
+
+echo ================================================
+echo "Create VNET with shared subnet"
+echo ================================================
 az network vnet create \
   -n $vnet \
   -g $resourceGroup \
@@ -60,34 +133,48 @@ az network vnet create \
   --subnet-name $sharedSubnet \
   --subnet-prefix 10.1.0.0/24
 
-# Create the subnet for the VPN Gateway 
+
+
+echo ================================================
+echo "Create the subnet for the VPN Gateway"
+echo ================================================
 az network vnet subnet create \
 --vnet-name $vnet \
 -n GatewaySubnet \
 -g $resourceGroup \
 --address-prefix 10.1.255.0/27
 
-# Create the subney for frontend services 
+echo ================================================
+echo "Create the subnet for frontend services"
+echo ================================================
 az network vnet subnet create \
 --vnet-name $vnet \
 -n $frontendSubnet \
 -g $resourceGroup \
 --address-prefix 10.1.1.0/24
 
-# Create the subney for backend services
+echo ================================================
+echo "Create the subnet for backend services"
+echo ================================================
 az network vnet subnet create \
 --vnet-name $vnet \
 -n $backendSubnet \
 -g $resourceGroup \
 --address-prefix 10.1.2.0/24
 
-#Get shared Subnet ID for ACI 
+
+echo ================================================
+echo "Get shared Subnet ID for ACI"
+echo ================================================
 sharedSubnetId=$(az network vnet subnet list --resource-group $resourceGroup --vnet-name $vnet --query "[?name=='$sharedSubnet'].id" -o tsv)
 
 #Set DNS to Default for ACI deployment
 # az network vnet update --name $vnet --resource-group $resourceGroup --dns-servers ''
 
-#DNS Forwarder (ACI)
+
+echo ================================================
+echo "Create DNS Forwarder (ACI)"
+echo ================================================
 az container create \
   --resource-group $resourceGroup \
   --location $location \
@@ -100,54 +187,77 @@ az container create \
   --subnet $sharedSubnetId \
   --gitrepo-url https://github.com/Sam-Rowe/Remote-DevContainers-Extras \
   --gitrepo-mount-path /config \
-  --command-line "/coredns -conf /config/host/Corefile"
+  --command-line "/coredns -conf /config/host/$corednsFile"
 
-# https://github.com/redocksoft/coredns-config-azure-forwarder
-# https://github.com/Sam-Rowe/Remote-DevContainers-Extras
-# Get private IP of Container Instance
+echo ================================================
+echo "Get private IP of Container Instance"
+echo ================================================
 dnsip=$(az container show --name $aci --resource-group $resourceGroup --query ipAddress.ip --output tsv)
 
-# Update Custom DNS in VNET
+echo ================================================
+echo "Update Custom DNS in VNET"
+echo ================================================
 az network vnet update --name $vnet --resource-group $resourceGroup --dns-servers $dnsip
-
-# ---------------------------------------------------------
 
 # ---------------------------------------------------------
 # VPN Gateway creation
 # ---------------------------------------------------------
 
-#Create public IP address for the VPN Gateway
+
+echo ================================================
+echo "Create public IP address for the VPN Gateway"
+echo ================================================
 az network public-ip create \
   -n $vpnGatewayPIP \
   -g $resourceGroup \
   --allocation-method Dynamic 
 
-#Create hte VPN Gateway with P2S enabled
-az network vnet-gateway create \
--g $resourceGroup \
--n $vpnGateway \
--l $location \
---public-ip-address $vpnGatewayPIP \
---sku Basic \
---gateway-type Vpn \
---vpn-type RouteBased \
---address-prefixes 172.16.24.0/24 \
---vpn-gateway-generation Generation1 \
---vnet $vnet 
---no-wait
 
-# Install the certificate for the VPN Gateway
-az network vnet-gateway root-cert create \
--g $resourceGroup \
--n p2sroot \
---gateway-name $vpnGateway \
---public-cert-data $vpngatewaycert
+echo ================================================
+echo "Create the VPN Gateway with P2S enabled"
+echo ================================================
+if [ $vpnwait == false ]; 
+then
+  az network vnet-gateway create \
+    -g $resourceGroup \
+    -n $vpnGateway \
+    -l $location \
+    --public-ip-address $vpnGatewayPIP \
+    --sku Basic \
+    --gateway-type Vpn \
+    --vpn-type RouteBased \
+    --address-prefixes 172.16.24.0/24 \
+    --vpn-gateway-generation Generation1 \
+    --vnet $vnet \
+    --root-cert-name p2sroot \
+    --root-cert-data $vpngatewaycert \
+    --no-wait
+else
+   az network vnet-gateway create \
+    -g $resourceGroup \
+    -n $vpnGateway \
+    -l $location \
+    --public-ip-address $vpnGatewayPIP \
+    --sku Basic \
+    --gateway-type Vpn \
+    --vpn-type RouteBased \
+    --address-prefixes 172.16.24.0/24 \
+    --vpn-gateway-generation Generation1 \
+    --vnet $vnet \
+    --root-cert-name p2sroot \
+    --root-cert-data $vpngatewaycert 
+fi
 
-# Generate the client install package for the VPN Gateway
-az network vnet-gateway vpn-client generate \
--g $resourceGroup \
--n $vpnGateway \
---processor-architecture Amd64
+
+
+# echo ================================================
+# echo "Install the certificate for the VPN Gateway"
+# echo ================================================
+# az network vnet-gateway root-cert create \
+# -g $resourceGroup \
+# -n p2sroot \
+# --gateway-name $vpnGateway \
+# --public-cert-data $vpngatewaycert
 
 # ---------------------------------------------------------
 
@@ -155,7 +265,9 @@ az network vnet-gateway vpn-client generate \
 # DevContainer / Host VM Creation
 # ---------------------------------------------------------
 
-# Create static Private IP address for the VM
+echo ================================================
+echo "Create static Private IP address for the VM"
+echo ================================================
 az network nic create \
 --name $vmNicName \
 --resource-group $resourceGroup \
@@ -165,7 +277,10 @@ az network nic create \
 --vnet-name $vnet \
 --public-ip-address ""
 
-#Create the VM
+
+echo ================================================
+echo "Create the VM"
+echo ================================================
 az vm create \
 --resource-group $resourceGroup \
 --name $vmName \
@@ -176,9 +291,41 @@ az vm create \
 --image UbuntuLTS \
 --custom-data docker-cloud-init.txt
 
-# Enable auto shutdown
+
+echo ================================================
+echo "Enable auto shutdown"
+echo ================================================
 az vm auto-shutdown --resource-group $resourceGroup --name $vmName --time 19:00 
 
+
+# Generate the client install package for the VPN Gateway
+# ---------------------------------------------------------
+if [ $vpnwait == false ]; 
+then
+  echo =====================================================================================
+  echo "Can download the VPN Client from the link generated be the example statement below."
+  echo "Key to check the status before running this statement." 
+  echo "Or check in the portal for when it completes and generate the client there"
+  echo =====================================================================================
+  echo 'az network vnet-gateway vpn-client generate \'
+  echo '-g $resourceGroup \'
+  echo '-n $vpnGateway \'
+  echo '--processor-architecture Amd64'
+else
+  echo =====================================================================================
+  echo "Can download the VPN Client from the link generated below."
+  echo =====================================================================================
+  az network vnet-gateway vpn-client generate \
+     -g $resourceGroup \
+     -n $vpnGateway \
+     --processor-architecture Amd64
+fi
+
+
+
+echo ============================================================
+echo "Completed."
+echo ============================================================
 #restart VM (pickup new dns)
 # az vm restart --resource-group $resourceGroup --name $vmName
 # ---------------------------------------------------------

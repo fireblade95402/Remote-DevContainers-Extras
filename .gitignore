@@ -1,5 +1,3 @@
-host/codespace-devtestlab
-host/codespace-devtestlab.pub
-host/vpngatecert.txt
-host/codespace.pub
 .vpngatecert.txt.swp
+host/*.pub
+host/*.cer

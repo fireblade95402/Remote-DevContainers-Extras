@@ -4,12 +4,12 @@
 # To create self-signed root and client certificates for a P2S VPN heres a link: https://www.getanadmin.com/azure/azure-point-to-site-vpn-setup-step-by-step/
 
 # Parameters
-resourceGroup=development
+resourceGroup=development-test
 defaultPrefix=dev
 location=uksouth
 adminUsername=azureuser
-SSHKeyFile=codespace.pub
-vpngatewaycert=vpngatecert.txt
+SSHKeyFile=devSSH.pub
+vpngatewaycert=p2sroot.cer
 sharedSubnet=shared
 backendSubnet=backend
 frontendSubnet=frontend

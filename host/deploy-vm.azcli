@@ -4,13 +4,14 @@
 # To create self-signed root and client certificates for a P2S VPN heres a link: https://www.getanadmin.com/azure/azure-point-to-site-vpn-setup-step-by-step/
 
 # Parameters
-resourceGroup=development-test
+resourceGroup=development
 defaultPrefix=dev
 location=uksouth
 adminUsername=azureuser
 SSHKeyFile=devSSH.pub
 vpngatewaycert=p2sroot.cer
 sharedSubnet=shared
+dnsSubnet=customdns
 backendSubnet=backend
 frontendSubnet=frontend
 customScriptFile=docker-cloud-init.txt
@@ -38,6 +39,7 @@ echo Admin Username: $adminUsername
 echo SSH Key File: $SSHKeyFile
 echo Virtual Network: $vnet
 echo sharedSubnet: $sharedSubnet
+echo dnsSubnet: $dnsSubnet
 echo frontendSubnet: $frontendSubnet
 echo backendSubnet: $backendSubnet
 echo Customer Script: $customScriptFile
@@ -162,11 +164,20 @@ az network vnet subnet create \
 -g $resourceGroup \
 --address-prefix 10.1.2.0/24
 
+echo ================================================
+echo "Create the subnet for Custom DNS (ACI) services"
+echo ================================================
+az network vnet subnet create \
+--vnet-name $vnet \
+-n $dnsSubnet \
+-g $resourceGroup \
+--address-prefix 10.1.3.0/24
+
 
 echo ================================================
-echo "Get shared Subnet ID for ACI"
+echo "Get Custom DNS Subnet ID for ACI"
 echo ================================================
-sharedSubnetId=$(az network vnet subnet list --resource-group $resourceGroup --vnet-name $vnet --query "[?name=='$sharedSubnet'].id" -o tsv)
+dnsSubnetId=$(az network vnet subnet list --resource-group $resourceGroup --vnet-name $vnet --query "[?name=='$dnsSubnet'].id" -o tsv)
 
 #Set DNS to Default for ACI deployment
 # az network vnet update --name $vnet --resource-group $resourceGroup --dns-servers ''
@@ -184,7 +195,7 @@ az container create \
   --ports 53 \
   --protocol UDP \
   --ip-address Private \
-  --subnet $sharedSubnetId \
+  --subnet $dnsSubnetId \
   --gitrepo-url https://github.com/Sam-Rowe/Remote-DevContainers-Extras \
   --gitrepo-mount-path /config \
   --command-line "/coredns -conf /config/host/$corednsFile"

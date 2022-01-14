@@ -121,3 +121,7 @@ The below steps will take a Linux VM that you want to use as a secure devcontain
     - ![Port Forwarding](images/loginerror3.png) 
   - The page can't be reached with refresh automatically and log in once the port has been forwarded.
   - **Note:** The port will change every time you login.
+- SSH Authentication issues with Azure DevOps
+  - Make sure the key pair created for Azure DevOps is called *id_rsa* 
+  - Add a SSH key to the development VM (.ssh) and to Azure DevOps.
+  - Add a SSH key to the devcontainer (.ssh) and to Azure DevOps. Plus run the ```ssh-add <.ssh/is_rsa>``` statement to link the key coreectly

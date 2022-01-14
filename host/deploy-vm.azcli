@@ -21,7 +21,7 @@ corednsFile=Corefile
 vmName="$defaultPrefix-vm"
 vmNicName="$defaultPrefix-nic"
 vnet="$defaultPrefix-vnet"
-aci="$defaultPrefix-dns-forwarder-aci"
+aci="$defaultPrefix-dnsforwarder-aci"
 vpnGateway="$defaultPrefix-gw"
 vpnGatewayPIP="$defaultPrefix-gw-pip"
 

@@ -4,8 +4,8 @@
 # To create self-signed root and client certificates for a P2S VPN heres a link: https://www.getanadmin.com/azure/azure-point-to-site-vpn-setup-step-by-step/
 
 # Parameters
-resourceGroup=development
-defaultPrefix=dev
+resourceGroup=development-wip
+defaultPrefix=dev123
 location=uksouth
 adminUsername=azureuser
 SSHKeyFile=devSSH.pub
@@ -17,6 +17,12 @@ frontendSubnet=frontend
 customScriptFile=docker-cloud-init.txt
 corednsFile=Corefile
 
+#Automation Account 
+autoAcctSKU=Basic
+scheduleStart="dailyStart"
+scheduleStop="dailyStop"
+
+
 # Variables
 vmName="$defaultPrefix-vm"
 vmNicName="$defaultPrefix-nic"
@@ -25,6 +31,10 @@ aci="$defaultPrefix-dnsforwarder-aci"
 vpnGateway="$defaultPrefix-gw"
 vpnGatewayPIP="$defaultPrefix-gw-pip"
 
+#Automation Account
+automation="$defaultPrefix-automation"
+startRunbook="$defaultPrefix-automation-vm-start-runbook"
+stopRunbook="$defaultPrefix-automation-vm-stop-runbook"
 
 # Show all variables used
 echo ==========================================
@@ -46,12 +56,25 @@ echo Customer Script: $customScriptFile
 echo VPN Gateway: $vpnGateway
 echo VPN Gateway Public IP: $vpnGatewayPIP
 echo VPN Cert File: $vpngatewaycert
+echo Automation Account: $automation
+echo Automation SKU: $autoAcctSKU
+echo Automation Start Runbook: $startRunbook 
+echo Automation Stop Runbook: $stopRunbook 
 echo ==========================================
 
 echo ==========================================
 echo "Checking for required Files"
 echo ==========================================
 
+#Get subscription
+subid=$(az account show --query "id" -o tsv)
+
+#bearer token for Rest Calls
+declare response=$(az account get-access-token)
+declare token=$(echo $response | jq ".accessToken" -r)
+
+#Extensions auto install
+az config set extension.use_dynamic_install=yes_without_prompt
 fileMissing=false
 
 if [ -f "$SSHKeyFile" ]; 
@@ -332,6 +355,211 @@ else
      --processor-architecture Amd64
 fi
 
+
+echo =================================================
+echo "Automation Account"
+echo =================================================
+ret=$(az automation account list --query "[?name=='$automation']" -o tsv)
+if [ -z "$ret" ]; 
+then
+  echo ==========================================
+  echo "Creating Automation Account ($automation)"
+  echo ==========================================
+  az automation account create --automation-account-name $automation --resource-group $resourceGroup --location $location --sku $autoAcctSKU 
+  echo ==========================================
+else
+  echo ==========================================
+  echo "Automation Account ($automation) already Exists"
+  echo ==========================================
+fi
+
+
+echo =================================================
+echo "Automation Account Runbook ($startRunbook)"
+echo =================================================
+ret=$(az automation runbook list --automation-account-name $automation --resource-group $resourceGroup --query "[?name=='$startRunbook']" -o tsv)
+if [ -z "$ret" ]; 
+then
+  echo ==========================================
+  echo "Creating Automation Runbook ($startRunbook)"
+  echo ==========================================
+  az automation runbook create --automation-account-name $automation --name $startRunbook --resource-group $resourceGroup --location $location --type PowerShell --description "This runbook starts all VM's with tag enabled=true"
+  echo ==========================================
+else
+  echo ==========================================
+  echo "Automation Runbook ($startRunbook) already Exists"
+  echo ==========================================
+fi
+
+echo =================================================
+echo "Automation Account Runbook Content Update for ($startRunbook)"
+echo =================================================
+script=start-dev-env-runbook.ps1
+tmpScript=tmp-$script
+
+cp $script $tmpScript
+sed -i "s/<rg>/$resourceGroup/" $tmpScript
+sed -i "s/<aci>/$aci/"  $tmpScript
+az automation runbook replace-content --automation-account-name $automation --resource-group $resourceGroup --name $startRunbook --content @./$tmpScript
+az automation runbook publish --automation-account-name $automation --name $startRunbook --resource-group $resourceGroup 
+rm  $tmpScript
+echo ==========================================
+
+echo =================================================
+echo "Automation Account Runbook ($stopRunbook)"
+echo =================================================
+ret=$(az automation runbook list --automation-account-name $automation --resource-group $resourceGroup --query "[?name=='$stopRunbook']" -o tsv)
+if [ -z "$ret" ]; 
+then
+  echo ==========================================
+  echo "Creating Automation Runbook ($stopRunbook)"
+  echo ==========================================
+  az automation runbook create --automation-account-name $automation --name $stopRunbook --resource-group $resourceGroup --location $location --type PowerShell --description "This runbook starts all VM's with tag enabled=true"
+  echo ==========================================
+else
+  echo ==========================================
+  echo "Automation Runbook ($stopRunbook) already Exists"
+  echo ==========================================
+fi
+
+echo =================================================
+echo "Automation Account Runbook Content Update for ($stopRunbook)"
+echo =================================================
+script=stop-dev-env-runbook.ps1
+tmpScript=tmp-$script
+
+cp $script $tmpScript
+sed -i "s/<rg>/$resourceGroup/" $tmpScript
+sed -i "s/<aci>/$aci/"  $tmpScript
+az automation runbook replace-content --automation-account-name $automation --resource-group $resourceGroup --name $stopRunbook --content @./$tmpScript
+az automation runbook publish --automation-account-name $automation --name $stopRunbook --resource-group $resourceGroup 
+rm  $tmpScript
+echo ==========================================
+
+
+
+echo =================================================
+echo AUTOMATION SCHEDULE 
+echo =================================================
+echo "Create Automation Schedule REST START"
+echo ================================================= 
+startdate="$(date "+%Y-%m-%d" -d "tomorrow")T08:00:00.0000000Z"
+JSON="{'name': '$scheduleStart', 'properties': {'description': 'my description of schedule goes here','startTime': '$startdate','interval': 1,'frequency': 'Day', 'advancedSchedule': {}}}"
+URI="https://management.azure.com/subscriptions/$subid/resourceGroups/$resourceGroup/providers/Microsoft.Automation/automationAccounts/$automation/schedules/$scheduleStart?api-version=2019-06-01"
+
+az rest --method put \
+--headers "Accept=application/json" \
+--uri $URI \
+--body "$JSON"
+echo =================================================
+echo "Create Automation Schedule REST STOP"
+echo ================================================= 
+startdate="$(date "+%Y-%m-%d" -d "tomorrow")T19:00:00.0000000Z"
+JSON="{'name': '$scheduleStop', 'properties': {'description': 'my description of schedule goes here','startTime': '$startdate','interval': 1,'frequency': 'Day', 'advancedSchedule': {}}}"
+URI="https://management.azure.com/subscriptions/$subid/resourceGroups/$resourceGroup/providers/Microsoft.Automation/automationAccounts/$automation/schedules/$scheduleStop?api-version=2019-06-01"
+
+az rest --method put \
+--headers "Accept=application/json" \
+--uri $URI \
+--body "$JSON"
+echo =================================================
+
+
+URI="https://management.azure.com/subscriptions/$subid/resourceGroups/$resourceGroup/providers/Microsoft.Automation/automationAccounts/$automation/jobSchedules?api-version=2019-06-01"
+jobschedule=$(az rest  --method get --headers "Content-Type=application/json" --uri $URI)
+
+if [[ $jobschedule != *"$startRunbook"* ]]; then
+  echo =================================================
+  echo "New jobschedule ID Create Automation Job Schedule (REST)"
+  echo ================================================= 
+  jobscheduleId=$(cat /proc/sys/kernel/random/uuid)
+  URI="https://management.azure.com/subscriptions/$subid/resourceGroups/$resourceGroup/providers/Microsoft.Automation/automationAccounts/$automation/jobSchedules/$jobscheduleId?api-version=2019-06-01"
+  JSON="{'properties': {'schedule': {'name': '$scheduleStart'}, 'runbook': {'name': '$startRunbook'}}}"
+  az rest --method put \
+  --headers "Content-Type=application/json" \
+  --uri $URI \
+  --body "$JSON"
+  echo =================================================
+else
+  echo =================================================
+  echo "Existing jobschedule ID Create Automation Job Schedule (REST)"
+  echo ================================================= 
+
+fi
+
+
+
+URI="https://management.azure.com/subscriptions/$subid/resourceGroups/$resourceGroup/providers/Microsoft.Automation/automationAccounts/$automation/jobSchedules?api-version=2019-06-01"
+jobschedule=$(az rest  --method get --headers "Content-Type=application/json" --uri $URI)
+
+if [[ $jobschedule != *"$stopRunbook"* ]]; then
+  echo =================================================
+  echo "New jobschedule ID Create Automation Job Schedule (REST)"
+  echo ================================================= 
+  jobscheduleId=$(cat /proc/sys/kernel/random/uuid)
+  URI="https://management.azure.com/subscriptions/$subid/resourceGroups/$resourceGroup/providers/Microsoft.Automation/automationAccounts/$automation/jobSchedules/$jobscheduleId?api-version=2019-06-01"
+  JSON="{'properties': {'schedule': {'name': '$scheduleStop'}, 'runbook': {'name': '$stopRunbook'}}}"
+  az rest --method put \
+  --headers "Content-Type=application/json" \
+  --uri $URI \
+  --body "$JSON"
+  echo =================================================
+else
+  echo =================================================
+  echo "Existing jobschedule ID Create Automation Job Schedule (REST)"
+  echo =================================================
+fi
+
+
+
+
+
+echo ==========================================
+echo "Creating Managed Identity for $automation"
+echo MANUAL step
+echo ==========================================
+echo "Manually create  the Managed Identity for the Automation Account in the portal (can't see option in CLI)"
+echo ""
+while true; do
+    read -p "Please enter Managed Identity Object (principal) ID for the automation account?" identityAppId
+    read -p "Is $identityAppId correct? " yn
+    case $yn in
+        [Yy]* ) break;;
+        * ) echo "Please answer yes or no.";;
+    esac
+done
+az role assignment create --assignee $identityAppId --role "Virtual Machine Contributor" --subscription $subid
+
+
+
+
+URI="https://management.azure.com/subscriptions/$subid/resourceGroups/$resourceGroup/providers/Microsoft.Automation/automationAccounts/$automation/jobSchedules?api-version=2019-06-01"
+jobschedule=$(az rest  --method get --headers "Content-Type=application/json" --uri $URI --query "value[0].properties.jobScheduleId" -o tsv)
+
+if [ -z "$jobschedule" ]; 
+then
+  echo =================================================
+  echo "New jobschedule ID Create Automation Job Schedule (REST)"
+  echo ================================================= 
+  jobschedule=$(cat /proc/sys/kernel/random/uuid)
+  URI="https://management.azure.com/subscriptions/$subid/resourceGroups/$resourceGroup/providers/Microsoft.Automation/automationAccounts/$automation/jobSchedules/$jobschedule?api-version=2019-06-01"
+  az rest --method put \
+  --headers "Content-Type=application/json" \
+  --uri $URI \
+  --body "$JSON"
+  echo =================================================
+else
+  echo =================================================
+  echo "Existing jobschedule ID Create Automation Job Schedule (REST)"
+  echo ================================================= 
+  jobschedule=$(cat /proc/sys/kernel/random/uuid)
+  URI="https://management.azure.com/subscriptions/$subid/resourceGroups/$resourceGroup/providers/Microsoft.Automation/automationAccounts/$automation/jobSchedules/$jobschedule?api-version=2019-06-01"
+  # az rest --method put \
+  # --headers "Content-Type=application/json" \
+  # --uri $URI \
+  # --body "$JSON"
+  echo =================================================
+fi
 
 
 echo ============================================================

@@ -16,6 +16,7 @@ backendSubnet=backend
 frontendSubnet=frontend
 customScriptFile=docker-cloud-init.txt
 corednsFile=Corefile
+timezone=GMT
 
 #Automation Account 
 autoAcctSKU=Basic
@@ -451,7 +452,7 @@ echo =================================================
 echo "Create Automation Schedule REST START"
 echo ================================================= 
 startdate="$(date "+%Y-%m-%d" -d "tomorrow")T08:00:00.0000000Z"
-JSON="{'name': '$scheduleStart', 'properties': {'description': 'my description of schedule goes here','startTime': '$startdate','interval': 1,'frequency': 'Day', 'advancedSchedule': {}}}"
+JSON="{'name': '$scheduleStart', 'properties': {'description': 'my description of schedule goes here', 'timeZone': '$timezone' ,'startTime': '$startdate','interval': 1,'frequency': 'Day', 'advancedSchedule': {}}}"
 URI="https://management.azure.com/subscriptions/$subid/resourceGroups/$resourceGroup/providers/Microsoft.Automation/automationAccounts/$automation/schedules/$scheduleStart?api-version=2019-06-01"
 
 az rest --method put \
@@ -462,7 +463,7 @@ echo =================================================
 echo "Create Automation Schedule REST STOP"
 echo ================================================= 
 startdate="$(date "+%Y-%m-%d" -d "tomorrow")T19:00:00.0000000Z"
-JSON="{'name': '$scheduleStop', 'properties': {'description': 'my description of schedule goes here','startTime': '$startdate','interval': 1,'frequency': 'Day', 'advancedSchedule': {}}}"
+JSON="{'name': '$scheduleStop', 'properties': {'description': 'my description of schedule goes here', 'timeZone': '$timezone','startTime': '$startdate','interval': 1,'frequency': 'Day', 'advancedSchedule': {}}}"
 URI="https://management.azure.com/subscriptions/$subid/resourceGroups/$resourceGroup/providers/Microsoft.Automation/automationAccounts/$automation/schedules/$scheduleStop?api-version=2019-06-01"
 
 az rest --method put \

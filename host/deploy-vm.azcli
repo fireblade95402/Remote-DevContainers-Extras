@@ -4,8 +4,8 @@
 # To create self-signed root and client certificates for a P2S VPN heres a link: https://www.getanadmin.com/azure/azure-point-to-site-vpn-setup-step-by-step/
 
 # Parameters
-resourceGroup=development-wip
-defaultPrefix=dev123
+resourceGroup=development-test
+defaultPrefix=devtest
 location=uksouth
 adminUsername=azureuser
 SSHKeyFile=devSSH.pub
@@ -325,12 +325,19 @@ az vm create \
 --image UbuntuLTS \
 --custom-data docker-cloud-init.txt
 
+echo ================================================
+echo "Add Tag for Automation"
+echo ================================================
+az tag create 
+echo ================================================
+az tag create --resource-id /subscriptions/$subid/resourcegroups/$resourceGroup/providers/Microsoft.Compute/virtualMachines/$vmName --tags enabled=true
+echo ================================================
 
 echo ================================================
 echo "Enable auto shutdown"
 echo ================================================
 az vm auto-shutdown --resource-group $resourceGroup --name $vmName --time 19:00 
-
+echo ================================================
 
 # Generate the client install package for the VPN Gateway
 # ---------------------------------------------------------
@@ -465,12 +472,13 @@ az rest --method put \
 echo =================================================
 
 
+
 URI="https://management.azure.com/subscriptions/$subid/resourceGroups/$resourceGroup/providers/Microsoft.Automation/automationAccounts/$automation/jobSchedules?api-version=2019-06-01"
 jobschedule=$(az rest  --method get --headers "Content-Type=application/json" --uri $URI)
 
 if [[ $jobschedule != *"$startRunbook"* ]]; then
   echo =================================================
-  echo "New jobschedule ID Create Automation Job Schedule (REST)"
+  echo "New jobschedule ID Create Automation Job Schedule START (REST)"
   echo ================================================= 
   jobscheduleId=$(cat /proc/sys/kernel/random/uuid)
   URI="https://management.azure.com/subscriptions/$subid/resourceGroups/$resourceGroup/providers/Microsoft.Automation/automationAccounts/$automation/jobSchedules/$jobscheduleId?api-version=2019-06-01"
@@ -482,7 +490,7 @@ if [[ $jobschedule != *"$startRunbook"* ]]; then
   echo =================================================
 else
   echo =================================================
-  echo "Existing jobschedule ID Create Automation Job Schedule (REST)"
+  echo "Existing jobschedule ID Create Automation Job Schedule START (REST)"
   echo ================================================= 
 
 fi
@@ -494,7 +502,7 @@ jobschedule=$(az rest  --method get --headers "Content-Type=application/json" --
 
 if [[ $jobschedule != *"$stopRunbook"* ]]; then
   echo =================================================
-  echo "New jobschedule ID Create Automation Job Schedule (REST)"
+  echo "New jobschedule ID Create Automation Job Schedule STOP (REST)"
   echo ================================================= 
   jobscheduleId=$(cat /proc/sys/kernel/random/uuid)
   URI="https://management.azure.com/subscriptions/$subid/resourceGroups/$resourceGroup/providers/Microsoft.Automation/automationAccounts/$automation/jobSchedules/$jobscheduleId?api-version=2019-06-01"
@@ -506,7 +514,7 @@ if [[ $jobschedule != *"$stopRunbook"* ]]; then
   echo =================================================
 else
   echo =================================================
-  echo "Existing jobschedule ID Create Automation Job Schedule (REST)"
+  echo "Existing jobschedule ID Create Automation Job Schedule STOP (REST)"
   echo =================================================
 fi
 
@@ -528,7 +536,7 @@ while true; do
         * ) echo "Please answer yes or no.";;
     esac
 done
-az role assignment create --assignee $identityAppId --role "Virtual Machine Contributor" --subscription $subid
+az role assignment create --assignee $identityAppId --role "Contributor" --subscription $subid
 
 
 
